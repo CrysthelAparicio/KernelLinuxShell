@@ -13,6 +13,7 @@ using std::cout;
 using std::cin;
 
 vector<char *> split(string);
+void simplepipe(char **);
 
 int main() {
   int child;
@@ -31,8 +32,12 @@ int main() {
     if (child == 0) {
       vector<char *> vcmds = split(cmd);
       char **cmds = &vcmds[0];
-      execvp(cmds[0], cmds);
-      exit(0);
+
+      if (vcmds.size() == 4 && strcmp(cmds[1], "|") == 0) {
+        simplepipe(cmds);
+      } else {
+        execvp(cmds[0], cmds);
+      }
     } else {
       wait(&child);
     }
@@ -63,4 +68,37 @@ vector<char *> split(string cmd) {
   args.push_back(NULL);
 
   return args;
+}
+
+void simplepipe(char **commands) {
+  // si contiene el caracter '|' y solo hay 4 argumentos es un pipe simple:
+  // pipe[1] => data => pipe[0]
+  int pipes[2];
+  pipe(pipes);
+
+  int primer_comando = fork();
+  if (primer_comando == 0) {
+    // cerramos stdout y lo cambiamos por nuestro pipe
+    close(STDOUT_FILENO);
+    dup(pipes[1]);
+    close(pipes[0]);
+    close(pipes[1]);
+    execlp(commands[0], commands[0], NULL);
+  }
+
+  int segundo_comando = fork();
+  // cerramos stdin y lo cambiamos por nuestro pipe
+  if (segundo_comando == 0) {
+    close(STDIN_FILENO);
+    dup(pipes[0]);
+    close(pipes[1]);
+    close(pipes[0]);
+    execlp(commands[2], commands[2], NULL);
+  }
+
+  // cerrar los pipes y esperar la ejecucion de los procesos hijos
+  close(pipes[0]);
+  close(pipes[1]);
+  wait(&primer_comando);
+  wait(&segundo_comando);
 }
