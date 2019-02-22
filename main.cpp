@@ -6,12 +6,16 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
+using std::ofstream; //para los archivos
+using std::ifstream;
 using std::string;
 using std::vector;
 using std::cout;
 using std::cin;
 
+int shell_cat(char**);
 vector<char *> split(string);
 void simplepipe(char **);
 void multiplepipe(vector<char *>);
@@ -26,6 +30,7 @@ int main() {
   while (true) {
     cout << "> ";
     getline(cin, cmd);
+    //obtiene la entrada y el comando
 
     if (cmd == "exit") {
       break;
@@ -61,8 +66,8 @@ vector<char *> split(string cmd) {
   while (hasta != string::npos) {
     char *palabra = new char();
     strcpy(palabra, cmd.substr(desde, hasta - desde).c_str());
-    args.push_back(palabra);
-
+    args.push_back(palabra); //la cantidad de argumentos y empuja elementos a la palabra
+  //c_str extrae del string la ruta
     desde = hasta + 1;
     hasta = cmd.find(" ", desde);
   }
@@ -119,6 +124,8 @@ void multiplepipe(vector<char *> commands) {
       count += 1;
     }
   }
+
+  
 
   // iniciar el piping the procesos
   int child = fork();
@@ -188,4 +195,62 @@ int ismultiplepipe(vector<char *> commands) {
     return -1;
   }
   return pipe_count;
+}
+
+int shell_cat(char** tokens) {
+    if (tokens[1] == NULL) {
+        perror("\"cat\" missing argument.\n");
+
+    } else {
+        if (strcmp(tokens[1], ">") == 0) {
+            if (tokens[2]== NULL) {
+                perror("\"cat\" missing argument.\n");
+            } else {
+                char *line;
+                size_t buffer_size;
+                line = NULL;
+                buffer_size = 0;
+                string str;
+                
+                ofstream file(tokens[2]);
+                do {
+                    getline(cin, str);
+                    file  << str << "\n";
+                }while(!cin.eof()); //end of file
+               
+               /*
+                Para abrir un fichero para lectura, debe crear un objeto ifstream que se usará 
+                como cin . Para crear un fichero de escritura, se crea un objeto ofstream 
+                que se comporta como cout .
+               */
+                
+
+            }
+        } else {
+            int controlador = 0;
+            int tokenCount = 1;
+            int i = 0;
+
+            do {
+                if (controlador == 0 || tokens[tokenCount][i] == 0) {
+                    FILE *file;
+                    char line[100];
+                    file = fopen(tokens[tokenCount], "r");
+                    while (fscanf(file, "%[^\n]\n", line) != EOF) {
+                    // lee el file linea por linea entrando a la linea de bufer
+                    // Lee hasta que encuentra un ENTER
+                        printf("%s\n", line);
+                    }
+                    fclose(file);
+                    tokenCount++;
+                    i = 0;
+                }
+
+                i++;
+                controlador++;
+            } while (tokens[tokenCount] != NULL);
+        }
+
+    }
+    return 1;
 }
