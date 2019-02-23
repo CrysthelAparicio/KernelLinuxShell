@@ -24,7 +24,7 @@ void simplepipe(char **);
 void multiplepipe(vector<char *>);
 void exec_command(char **, int);
 void pipe_command(char **, int, int *);
-int ismultiplepipe(vector<char *>);
+bool ismultiplepipe(vector<char *>);
 
 int main()
 {
@@ -40,7 +40,7 @@ int main()
     {
       break;
     }
-    
+
     child = fork();
 
     if (child == 0)
@@ -55,13 +55,16 @@ int main()
       else if (strcmp(cmds[0], "cat") == 0 && strcmp(cmds[1], ">") == 0 && vcmds.size() == 4) {
         cat(cmds[2]);
       }
-      else if (ismultiplepipe(vcmds) != -1)
+      else if (ismultiplepipe(vcmds))
       {
         multiplepipe(vcmds);
       }
       else
       {
         execvp(cmds[0], cmds);
+        // si llega a este punto hubo un error
+        cerr << "error: comando \"" << cmds[0] << "\" no se pudo ejecutar\n";
+        exit(1);
       }
     }
     else
@@ -131,6 +134,9 @@ void simplepipe(char **commands)
   close(pipes[1]);
   wait(&primer_comando);
   wait(&segundo_comando);
+
+  // terminar el proceso
+  exit(0);
 }
 
 void cat(char *nombre_archivo) {
@@ -179,6 +185,9 @@ void multiplepipe(vector<char *> commands)
     exec_command(cmds, size);
   }
   wait(&child);
+
+  // terminar el proceso
+  exit(0);
 }
 
 void exec_command(char **cmds, int current_cmd)
@@ -217,13 +226,12 @@ void pipe_command(char **cmds, int current_cmd, int *pipe_out)
   exec_command(cmds, current_cmd);
 }
 
-int ismultiplepipe(vector<char *> commands)
+bool ismultiplepipe(vector<char *> commands)
 {
   // dados los commands revisar si es un pipe multiple
   // comando 1 | comando 2 | comando 3 | ... | comando n
   bool ispipe = false;
   bool haspipe = false;
-  int pipe_count = 0;
 
   for (int i = 0; i < commands.size() - 1; i += 1, ispipe = !ispipe)
   {
@@ -233,30 +241,22 @@ int ismultiplepipe(vector<char *> commands)
     }
     if (strcmp(commands[i], "|") == 0 && i == 0)
     {
-      return -1;
+      return false;
     }
     else if (strcmp(commands[i], "|") == 0 && i == commands.size() - 2)
     {
-      return -1;
+      return false;
     }
     else if (ispipe && strcmp(commands[i], "|") != 0)
     {
-      return -1;
+      return false;
     }
     else if (!ispipe && strcmp(commands[i], "|") == 0)
     {
-      return -1;
-    }
-    else if (ispipe && strcmp(commands[i], "|") == 0)
-    {
-      pipe_count += 1;
+      return false;
     }
   }
 
-  if (!haspipe)
-  {
-    return -1;
-  }
-  return pipe_count;
+  return haspipe;
 }
 

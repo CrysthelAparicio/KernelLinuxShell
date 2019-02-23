@@ -51,3 +51,6 @@ tags
 
 # Persistent undo
 [._]*.un~
+
+# Archivos de prueba
+*.txt
