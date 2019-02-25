@@ -112,20 +112,20 @@ void simplepipe(char **commands)
   int primer_comando = fork();
   if (primer_comando == 0)
   {
-    // cerramos stdout y lo cambiamos por nuestro pipe
+    // ponemos nuestro pipe en el lugar de stdout
     dup2(pipes[1], STDOUT_FILENO);
+    // cerramos el extremo del pipe que no ocupamos
     close(pipes[0]);
-    close(pipes[1]);
     execlp(commands[0], commands[0], NULL);
   }
 
   int segundo_comando = fork();
   if (segundo_comando == 0)
   {
-    // cerramos stdin y lo cambiamos por nuestro pipe
+    // ponemos nuestro pipe en el lugar de stdin
     dup2(pipes[0], STDIN_FILENO);
+    // cerramos el extremo del pipe que no ocupamos
     close(pipes[1]);
-    close(pipes[0]);
     execlp(commands[2], commands[2], NULL);
   }
 
@@ -204,9 +204,9 @@ void exec_command(char **cmds, int current_cmd)
       pipe_command(cmds, current_cmd - 1, pipe_in);
     }
 
-    // cambiamos stdin por nuestro pipe
+    // ponemos nuestro pipe en el lugar de stdin
     dup2(pipe_in[0], STDIN_FILENO);
-    close(pipe_in[0]);
+    // cerramos el extremo del pipe que no ocupamos
     close(pipe_in[1]);
     wait(&child);
   }
@@ -217,10 +217,10 @@ void exec_command(char **cmds, int current_cmd)
 
 void pipe_command(char **cmds, int current_cmd, int *pipe_out)
 {
-  // cambiar stdout por nuestro pipe
+  // ponemos nuestro pipe en el lugar de stdout
   dup2(pipe_out[1], STDOUT_FILENO);
+  // cerramos el extremo del pipe que no ocupamos
   close(pipe_out[0]);
-  close(pipe_out[1]);
 
   // continuar con el siguiente comando
   exec_command(cmds, current_cmd);
