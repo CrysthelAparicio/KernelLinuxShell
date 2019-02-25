@@ -8,14 +8,14 @@
 #include <iostream>
 #include <fstream>
 
+using std::cerr;
 using std::cin;
 using std::cout;
 using std::ifstream;
+using std::iostream;
 using std::ofstream; //para los archivos
 using std::string;
 using std::vector;
-using std::iostream;
-using std::cerr;
 
 void cat(char *);
 int shell_cat(char **);
@@ -25,6 +25,8 @@ void multiplepipe(vector<char *>);
 void exec_command(char **, int);
 void pipe_command(char **, int, int *);
 bool ismultiplepipe(vector<char *>);
+bool haveParams(vector<char *>);
+void simplepipeParams(vector<char *>);
 
 int main()
 {
@@ -52,12 +54,17 @@ int main()
       {
         simplepipe(cmds);
       }
-      else if (strcmp(cmds[0], "cat") == 0 && strcmp(cmds[1], ">") == 0 && vcmds.size() == 4) {
+      else if (strcmp(cmds[0], "cat") == 0 && strcmp(cmds[1], ">") == 0 && vcmds.size() == 4)
+      {
         cat(cmds[2]);
       }
       else if (ismultiplepipe(vcmds))
       {
         multiplepipe(vcmds);
+      }
+      else if (haveParams(vcmds))
+      {
+        simplepipeParams(vcmds);
       }
       else
       {
@@ -139,19 +146,22 @@ void simplepipe(char **commands)
   exit(0);
 }
 
-void cat(char *nombre_archivo) {
+void cat(char *nombre_archivo)
+{
   // redirecciona la entrada estándar del comando cat al archivo correspondiente
   ofstream archivo_salida(nombre_archivo);
 
   // si el archivo no se pudo abrir, mostrar error
-  if (!archivo_salida.is_open()) {
+  if (!archivo_salida.is_open())
+  {
     cerr << "error al abrir el archivo: " << nombre_archivo << '\n';
     exit(1);
   }
 
   string linea;
   // leer la entrada de la consola
-  while (getline(cin, linea)) {
+  while (getline(cin, linea))
+  {
     // agregar la linea de entrada al buffer
     archivo_salida << linea << '\n';
     // escribir el buffer al archivo
@@ -260,3 +270,90 @@ bool ismultiplepipe(vector<char *> commands)
   return haspipe;
 }
 
+bool haveParams(vector<char *> comandos)
+{
+  // comando para | comando para
+  bool haveParams;
+  int countPipe = 0;
+  int countLeft = 0;
+  int countRight = 0;
+  bool flagPipe = false;
+
+  for (int i = 0; i < comandos.size() - 1; i++)
+  {
+    if (strcmp(comandos[i], "|") == 0)
+    {
+      countPipe++;
+      flagPipe = true;
+      if (countPipe >= 2)
+      {
+        return false;
+      }
+    }
+    else if (!flagPipe)
+    {
+      countLeft++;
+    }
+    else if (flagPipe)
+    {
+      countRight++;
+    }
+  }
+  return countLeft >= 2 && countRight >= 2;
+}
+
+void simplepipeParams(vector<char *> commands)
+{
+  vector<char *> beforePipe;
+  vector<char *> afterPipe;
+  bool flagPipe = false;
+
+  for (int i = 0; i < commands.size() - 1; i++)
+  {
+    if (strcmp(commands[i], "|") == 0)
+    {
+      flagPipe = true;
+      continue;
+    }
+    if (!flagPipe)
+    {
+      beforePipe.push_back(commands[i]);
+    }
+    else
+    {
+      afterPipe.push_back(commands[i]);
+    }
+  }
+
+  int pipes[2];
+  pipe(pipes);
+
+  int primer_comando = fork();
+  if (primer_comando == 0)
+  {
+    // ponemos nuestro pipe en el lugar de stdout
+    dup2(pipes[1], STDOUT_FILENO);
+    // cerramos el extremo del pipe que no ocupamos
+    close(pipes[0]);
+    execvp(beforePipe[0], &beforePipe[0]);
+  }
+
+  int segundo_comando = fork();
+  if (segundo_comando == 0)
+  {
+    // ponemos nuestro pipe en el lugar de stdin
+    dup2(pipes[0], STDIN_FILENO);
+    // cerramos el extremo del pipe que no ocupamos
+    close(pipes[1]);
+    execvp(afterPipe[0], &afterPipe[0]);
+  }
+
+  // cerrar los pipes y esperar la ejecucion de los procesos hijos
+  close(pipes[0]);
+  close(pipes[1]);
+  wait(&primer_comando);
+  wait(&segundo_comando);
+
+  // terminar el proceso
+  exit(0);
+}
