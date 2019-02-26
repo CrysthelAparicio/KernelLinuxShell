@@ -18,7 +18,7 @@ using std::ofstream; //para los archivos
 using std::string;
 using std::vector;
 
-void cat(vector<char *>);
+void cat(char *);
 vector<char *> split(string);
 void simplepipe(char **);
 void multiplepipe(vector<char *>);
@@ -55,7 +55,7 @@ int main()
       }
       else if (strcmp(cmds[0], "cat") == 0 && strcmp(cmds[1], ">") == 0 && vcmds.size() == 4)
       {
-        cat(vcmds);
+        cat(cmds[2]);
       }
       else if (ismultiplepipe(vcmds))
       {
@@ -170,19 +170,15 @@ void simplepipe(char **commands)
   exit(0);
 }
 
-void cat(vector<char *> commands)
+void cat(char *nombre_archivo)
 {
-  int file = open(commands[2], O_RDWR | O_CREAT, 0666);
-
-  int pipes[2];
-  pipe(pipes);
+  int file = open(nombre_archivo, O_RDWR | O_CREAT, 0666);
 
   int child = fork();
   if (child == 0)
   {
     // redireccionar stdin al archivo
     dup2(file, STDOUT_FILENO);
-
     execlp("cat", "cat", NULL);
   } else {
     // esperar por EOF
