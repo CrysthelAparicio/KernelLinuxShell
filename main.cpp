@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include <cstdlib>
@@ -17,8 +18,7 @@ using std::ofstream; //para los archivos
 using std::string;
 using std::vector;
 
-void cat(char *);
-int shell_cat(char **);
+void cat(vector<char *>);
 vector<char *> split(string);
 void simplepipe(char **);
 void multiplepipe(vector<char *>);
@@ -55,7 +55,7 @@ int main()
       }
       else if (strcmp(cmds[0], "cat") == 0 && strcmp(cmds[1], ">") == 0 && vcmds.size() == 4)
       {
-        cat(cmds[2]);
+        cat(vcmds);
       }
       else if (ismultiplepipe(vcmds))
       {
@@ -170,26 +170,23 @@ void simplepipe(char **commands)
   exit(0);
 }
 
-void cat(char *nombre_archivo)
+void cat(vector<char *> commands)
 {
-  // redirecciona la entrada estándar del comando cat al archivo correspondiente
-  ofstream archivo_salida(nombre_archivo);
+  int file = open(commands[2], O_RDWR | O_CREAT, 0666);
 
-  // si el archivo no se pudo abrir, mostrar error
-  if (!archivo_salida.is_open())
-  {
-    cerr << "error al abrir el archivo: " << nombre_archivo << '\n';
-    exit(1);
-  }
+  int pipes[2];
+  pipe(pipes);
 
-  string linea;
-  // leer la entrada de la consola
-  while (getline(cin, linea))
+  int child = fork();
+  if (child == 0)
   {
-    // agregar la linea de entrada al buffer
-    archivo_salida << linea << '\n';
-    // escribir el buffer al archivo
-    archivo_salida.flush();
+    // redireccionar stdin al archivo
+    dup2(file, STDOUT_FILENO);
+
+    execlp("cat", "cat", NULL);
+  } else {
+    // esperar por EOF
+    wait(&child);
   }
 
   // terminar el proceso
