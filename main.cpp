@@ -43,13 +43,12 @@ int main()
       break;
     }
 
+    vector<char *> vcmds = split(cmd);
+    char **cmds = &vcmds[0];
     child = fork();
 
     if (child == 0)
     {
-      vector<char *> vcmds = split(cmd);
-      char **cmds = &vcmds[0];
-
       if (vcmds.size() == 4 && strcmp(cmds[1], "|") == 0)
       {
         simplepipe(cmds);
@@ -77,6 +76,10 @@ int main()
     else
     {
       wait(&child);
+      // liberar memoria
+      for (int i = 0; i < vcmds.size() - 1; i += 1) {
+        delete vcmds[i];
+      }
     }
   }
 
@@ -87,23 +90,44 @@ vector<char *> split(string cmd)
 {
   // dividir string por cada espacio
   vector<char *> args;
-  size_t desde = 0;
-  size_t hasta = cmd.find(" ");
-
-  while (hasta != string::npos)
+  int pos = 0;
+  string palabra = "";
+  while (cmd[pos])
   {
-    char *palabra = new char();
-    strcpy(palabra, cmd.substr(desde, hasta - desde).c_str());
-    args.push_back(palabra);
+    if (cmd[pos] == ' ') {
+      if (palabra != "") {
+        char *tempchar = new char();
+        strcpy(tempchar, palabra.c_str());
+        args.push_back(tempchar);
+        palabra = "";
+      }
+      pos += 1;
+      continue;
+    }
 
-    desde = hasta + 1;
-    hasta = cmd.find(" ", desde);
+    if (cmd[pos] == '|') {
+      if (palabra != "") {
+        char *tempchar = new char();
+        strcpy(tempchar, palabra.c_str());
+        args.push_back(tempchar);
+        palabra = "";
+      }
+      char *temppipe = new char();
+      strcpy(temppipe, "|");
+      args.push_back(temppipe);
+      palabra = "";
+    } else {
+      palabra += cmd[pos];
+    }
+    pos += 1;
   }
 
   // guardar la ultima palabra
-  char *palabra = new char();
-  strcpy(palabra, cmd.substr(desde, hasta - desde).c_str());
-  args.push_back(palabra);
+  if (palabra != "") {
+    char *tempchar = new char();
+    strcpy(tempchar, palabra.c_str());
+    args.push_back(tempchar);
+  }
   args.push_back(NULL);
 
   return args;
@@ -299,7 +323,7 @@ bool haveParams(vector<char *> comandos)
       countRight++;
     }
   }
-  return countLeft >= 2 && countRight >= 2;
+  return (countLeft >= 2 && countRight >= 1) || (countLeft >= 1 && countRight >= 2);
 }
 
 void simplepipeParams(vector<char *> commands)
@@ -324,6 +348,9 @@ void simplepipeParams(vector<char *> commands)
       afterPipe.push_back(commands[i]);
     }
   }
+
+  beforePipe.push_back(NULL);
+  afterPipe.push_back(NULL);
 
   int pipes[2];
   pipe(pipes);
