@@ -177,7 +177,7 @@ void cat(char *nombre_archivo)
   int child = fork();
   if (child == 0)
   {
-    // redireccionar stdin al archivo
+    // redireccionar stdout al archivo
     dup2(file, STDOUT_FILENO);
     execlp("cat", "cat", NULL);
   } else {
